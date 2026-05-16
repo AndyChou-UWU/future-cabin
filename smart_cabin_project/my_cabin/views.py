@@ -8,10 +8,12 @@ import requests
 import datetime
 import random
 import time
+from django.conf import settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-COMMENTS_FILE = BASE_DIR / 'comments.txt'
-BLACKLIST_FILE = BASE_DIR / 'blacklist.txt'
+# Use Django's settings.BASE_DIR for path resolution
+COMMENTS_FILE = os.path.join(settings.BASE_DIR, 'comments.txt')
+BLACKLIST_FILE = os.path.join(settings.BASE_DIR, 'blacklist.txt')
 
 # 隨機歡迎詞：網頁剛打開時給訪客的好印象
 WELCOME_MESSAGES = [
@@ -259,6 +261,7 @@ def check_ai_status(request):
             'provider': AI_PROVIDER
         })
 
+
 @csrf_exempt
 def feedback_view(request):
     """處理留言板存檔"""
@@ -267,7 +270,7 @@ def feedback_view(request):
         user_msg = request.POST.get('message', '').strip()
         time_stamp = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         
-        # 檢查是否為系統測試請求
+        # 系統測試請求
         if user_name == 'system_check' and user_msg == '系統狀態檢查測試留言':
             return JsonResponse({'status': 'ok'})
         
@@ -275,9 +278,10 @@ def feedback_view(request):
             return JsonResponse({'status': 'error', 'message': '請填寫留言內容'})
         
         try:
-            # 確保目錄存在
-            COMMENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-            # 存入 comments.txt
+            # Ensure the directory exists
+            comments_dir = os.path.dirname(COMMENTS_FILE)
+            os.makedirs(comments_dir, exist_ok=True)
+            # Write to comments.txt safely
             with open(COMMENTS_FILE, 'a', encoding='utf-8') as f:
                 f.write(f"【{time_stamp}】來自 {user_name}：{user_msg}\n" + "-"*30 + "\n")
             return JsonResponse({'status': 'ok'})
@@ -301,7 +305,6 @@ def redirect_to_check(request):
 
 def admin_view(request):
     """管理員頁面"""
-    # 簡單的密碼認證 (生產環境應使用更安全的認證)
     password = request.GET.get('pwd', '')
     if password != 'admin2024':
         return JsonResponse({'error': '未授權'}, status=401)
@@ -314,16 +317,13 @@ def admin_view(request):
 
 def api_admin_stats(request):
     """API: 獲取管理員統計數據"""
-    # 簡單的密碼認證
     password = request.GET.get('pwd', '')
     if password != 'admin2024':
         return JsonResponse({'error': '未授權'}, status=401)
     
-    # 獲取留言統計
     comments_data = load_guest_comments()
     total_comments = len(comments_data)
     
-    # 統計按日期分類的留言
     comments_by_date = {}
     for comment in comments_data:
         date = comment['timestamp'].split()[0] if comment['timestamp'] else '未知'
@@ -331,13 +331,11 @@ def api_admin_stats(request):
             comments_by_date[date] = 0
         comments_by_date[date] += 1
     
-    # 系統狀態
     system_status = {
         'ollama': check_ollama_status(),
-        'django': True,  # 如果能回應表示 Django 正常
+        'django': True,
     }
     
-    # 訪客信息統計
     visitor_names = {}
     for comment in comments_data:
         name = comment['name']
@@ -345,13 +343,10 @@ def api_admin_stats(request):
             visitor_names[name] = 0
         visitor_names[name] += 1
     
-    # 按留言數量排序的訪客榜
     top_visitors = sorted(visitor_names.items(), key=lambda x: x[1], reverse=True)
     
-    # 獲取黑名單
     blacklist = load_blacklist()
     
-    # 按日期排序留言用於圖表
     sorted_dates = sorted(comments_by_date.keys())
     chart_data = {
         'dates': sorted_dates,
@@ -363,9 +358,9 @@ def api_admin_stats(request):
         'unique_visitors': len(visitor_names),
         'comments_by_date': comments_by_date,
         'chart_data': chart_data,
-        'top_visitors': top_visitors[:10],  # 前 10 名訪客
+        'top_visitors': top_visitors[:10],
         'system_status': system_status,
-        'latest_comments': comments_data[:20],  # 最新20條留言
+        'latest_comments': comments_data[:20],
         'blacklist': blacklist,
     })
 
@@ -405,14 +400,16 @@ def api_delete_comment(request):
     if password != 'admin2024':
         return JsonResponse({'error': '未授權'}, status=401)
     
-    # 支持兩種方式：按索引或按時間戳+名字
     comment_timestamp = request.POST.get('timestamp', '')
     comment_name = request.POST.get('name', '')
     
     try:
-        # 讀取所有留言
-        with open(COMMENTS_FILE, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+        # Read comments safely
+        try:
+            with open(COMMENTS_FILE, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            return JsonResponse({'error': '找不到留言檔案'}, status=404)
         
         new_lines = []
         i = 0
@@ -420,12 +417,9 @@ def api_delete_comment(request):
         
         while i < len(lines):
             line = lines[i]
-            # 檢查是否是目標留言的開始行
             if comment_timestamp in line and f'來自 {comment_name}：' in line:
                 found = True
-                # 跳過留言行
                 i += 1
-                # 跳過分隔符行 (----------) 和空行
                 while i < len(lines) and (lines[i].strip().startswith('-') or not lines[i].strip()):
                     i += 1
                 continue
@@ -436,7 +430,6 @@ def api_delete_comment(request):
         if not found:
             return JsonResponse({'error': '找不到留言'}, status=404)
         
-        # 寫回文件
         with open(COMMENTS_FILE, 'w', encoding='utf-8') as f:
             f.writelines(new_lines)
         
@@ -447,12 +440,15 @@ def api_delete_comment(request):
 
 def load_blacklist():
     """加載黑名單"""
-    if not BLACKLIST_FILE.exists():
+    if not os.path.exists(BLACKLIST_FILE):
         return []
     try:
         with open(BLACKLIST_FILE, 'r', encoding='utf-8') as f:
             return [line.strip() for line in f.readlines() if line.strip()]
-    except:
+    except FileNotFoundError:
+        # Treat missing file as empty blacklist
+        return []
+    except Exception:
         return []
 
 
@@ -473,13 +469,19 @@ def api_ban_visitor(request):
     try:
         blacklist = load_blacklist()
         if visitor_name not in blacklist:
+            # Ensure directory exists before writing
+            blacklist_dir = os.path.dirname(BLACKLIST_FILE)
+            os.makedirs(blacklist_dir, exist_ok=True)
             with open(BLACKLIST_FILE, 'a', encoding='utf-8') as f:
                 f.write(f"{visitor_name}\n")
         
-        # 刪除該訪客的所有留言
+        # Remove all comments from this visitor
         comments = load_guest_comments()
-        with open(COMMENTS_FILE, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+        try:
+            with open(COMMENTS_FILE, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            lines = []
         
         new_lines = []
         skip_block = False
@@ -499,16 +501,6 @@ def api_ban_visitor(request):
         return JsonResponse({'status': 'ok', 'message': f'已踢出訪客: {visitor_name}'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-
-
-def api_get_blacklist(request):
-    """API: 獲取黑名單"""
-    password = request.GET.get('pwd', '')
-    if password != 'admin2024':
-        return JsonResponse({'error': '未授權'}, status=401)
-    
-    blacklist = load_blacklist()
-    return JsonResponse({'blacklist': blacklist})
 
 
 @csrf_exempt

@@ -144,6 +144,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.ngrok-free.app',
     'https://*.ngrok-free.dev',
+    'https://*.railway.app',
 ]
 
 CSRF_COOKIE_SECURE = True
