@@ -9,7 +9,7 @@ import datetime
 import random
 import time
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 COMMENTS_FILE = BASE_DIR / 'comments.txt'
 BLACKLIST_FILE = BASE_DIR / 'blacklist.txt'
 
