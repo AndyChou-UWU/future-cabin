@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'smart_cabin_project.my_cabin.urls'
+ROOT_URLCONF = 'my_cabin.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -72,7 +72,7 @@ TEMPLATES = [
         },
     },
 ]
-WSGI_APPLICATION = 'smart_cabin_project.my_cabin.wsgi.application'
+WSGI_APPLICATION = 'my_cabin.wsgi.application'
  
 
 

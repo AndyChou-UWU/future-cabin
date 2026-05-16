@@ -1,1 +1,1 @@
-web: gunicorn smart_cabin_project.my_cabin.wsgi:application
+web: gunicorn my_cabin.wsgi:application --bind 0.0.0.0:$PORT
