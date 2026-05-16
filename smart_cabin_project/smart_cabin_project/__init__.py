@@ -1,0 +1,1 @@
+# Makes the inner Django project a proper Python package
