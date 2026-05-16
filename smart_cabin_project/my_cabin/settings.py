@@ -26,7 +26,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -68,7 +68,7 @@ TEMPLATES = [
         },
     },
 ]
-WSGI_APPLICATION = 'my_cabin.wsgi.application'
+WSGI_APPLICATION = 'smart_cabin_project.my_cabin.wsgi.application'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",  # 確保專案根目錄下的 static 資料夾會被讀取
@@ -84,6 +84,7 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
+        conn_max_age=600,
         default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3')
     )
 }
@@ -132,7 +133,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # 允許來自 ngrok 的跨站請求
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.ngrok-free.app',
     'https://*.ngrok-free.dev',
