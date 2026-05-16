@@ -528,3 +528,13 @@ def api_unban_visitor(request):
         return JsonResponse({'status': 'ok', 'message': f'已解除訪客封禁: {visitor_name}'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+
+def api_get_blacklist(request):
+    """API: 獲取黑名單"""
+    password = request.GET.get('pwd', '')
+    if password != 'admin2024':
+        return JsonResponse({'error': '未授權'}, status=401)
+    
+    blacklist = load_blacklist()
+    return JsonResponse({'blacklist': blacklist})
