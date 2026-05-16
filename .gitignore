@@ -1,0 +1,11 @@
+# Virtual environment
+venv/
+
+# SQLite database
+db.sqlite3
+
+# Python cache
+__pycache__/
+
+# Sensitive files (API keys, credentials, etc.)
+api key.txt

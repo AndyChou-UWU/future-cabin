@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="shortcut icon" type="image/png" href="{% static 'logo.png' %}">
+    <title>FUTURE CABIN | 監控中心</title>
+    <script>
+        // 檢查系統是否已通過檢查
+        window.addEventListener('load', function() {
+            const checkPassed = localStorage.getItem('systemCheckPassed');
+            const checkTime = localStorage.getItem('checkTime');
+
+            if (!checkPassed || checkPassed !== 'true') {
+                // 未通過檢查，跳轉回檢查頁面
+                window.location.href = '{% url "check" %}';
+                return;
+            }
+
+            if (checkTime) {
+                const timeDiff = Date.now() - parseInt(checkTime);
+                const hours24 = 24 * 60 * 60 * 1000; // 24小時的毫秒數
+
+                if (timeDiff >= hours24) {
+                    // 超過24小時，需要重新檢查
+                    localStorage.removeItem('systemCheckPassed');
+                    localStorage.removeItem('checkTime');
+                    window.location.href = '{% url "check" %}';
+                    return;
+                }
+            }
+        });
+    </script>
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent: #feca57;
+            --bg: #020617;
+            --card: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #1e293b 0%, #020617 100%);
+            color: #f8fafc;
+            font-family: 'Inter', 'PingFang TC', sans-serif;
+            margin: 0; padding: 0; min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="particleGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" style="stop-color:rgba(0,242,254,0.1);stop-opacity:1"/><stop offset="100%" style="stop-color:rgba(79,172,254,0.05);stop-opacity:0"/></radialGradient></defs><circle cx="200" cy="200" r="2" fill="url(%23particleGrad)"/><circle cx="800" cy="300" r="1.5" fill="url(%23particleGrad)"/><circle cx="600" cy="700" r="1" fill="url(%23particleGrad)"/><circle cx="100" cy="800" r="2.5" fill="url(%23particleGrad)"/><circle cx="900" cy="100" r="1.8" fill="url(%23particleGrad)"/></svg>');
+            opacity: 0.6;
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
+
+        /* 導航：電磁質感 */
+        nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 40px; background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(20px); border-bottom: 2px solid var(--primary);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        .nav-logo { display: flex; align-items: center; gap: 15px; }
+        .nav-logo img { height: 50px; width: 50px; border-radius: 50%; border: 2px solid var(--primary); box-shadow: 0 0 15px var(--primary); }
+        .nav-logo h1 { font-size: 1.8em; margin: 0; letter-spacing: 2px; color: #fff; text-shadow: 0 0 10px var(--primary); }
+
+        /* 狀態檢查按鈕 */
+        .status-check-btn {
+            background: rgba(0,242,254,0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .status-check-btn:hover {
+            background: var(--primary);
+            color: #020617;
+            text-shadow: none;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        .container { width: 95%; max-width: 1600px; margin: 25px auto; }
+
+        .page-header {
+            display: flex; flex-direction: column; gap: 20px;
+            padding: 50px 40px; margin-bottom: 40px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            position: relative; overflow: hidden; min-height: 200px;
+        }
+        .page-header::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(0,242,254,0.1), transparent);
+            animation: rotate 10s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .page-header h2 { font-size: 2.5em; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--primary); margin: 0; z-index: 1; position: relative; }
+        .page-header .subtitle { font-size: 1.2em; color: #cbd5e1; line-height: 1.6; margin: 0; z-index: 1; position: relative; }
+        .page-header .eyebrow {
+            color: var(--accent); text-transform: uppercase; letter-spacing: 0.2em;
+            font-size: 0.85em; margin: 0;
+        }
+        .page-header h2 {
+            margin: 0; font-size: 2.8em; line-height: 1.05; color: #fff;
+        }
+        .page-header .subtitle {
+            margin: 0; color: #cbd5e1; font-size: 1rem; line-height: 1.8;
+            max-width: 860px;
+        }
+
+        /* 輪播看板 */
+        .hero-carousel {
+            width: 100%; height: 450px; border-radius: 25px; overflow: hidden;
+            border: 1px solid var(--border); margin-bottom: 35px; position: relative;
+        }
+        .carousel-inner { display: flex; transition: 0.8s ease; height: 100%; }
+        .slide { min-width: 100%; height: 100%; position: relative; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.55); }
+        .slide-content { position: absolute; bottom: 40px; left: 40px; border-left: 5px solid var(--primary); padding-left: 22px; max-width: 60%; }
+        .slide-content h2 { font-size: 2.4em; margin: 0; color: var(--primary); }
+
+        .card { background: var(--card); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid var(--border); padding: 28px; box-shadow: 0 14px 40px rgba(0,0,0,0.45); position: relative; overflow: hidden; }
+        .card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0,242,254,0.1), transparent); animation: shimmer 3s infinite; }
+        @keyframes shimmer { 0% { left: -100%; } 100% { left: 100%; } }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 20px 60px rgba(0,0,0,0.6); transition: all 0.3s ease; }
+        h3 { color: var(--primary); font-size: 1.35em; margin: 0 0 22px 0; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+
+        /* AI 聊天視窗 */
+        .chat-wrap { height: 460px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; border: 1px solid rgba(255,255,255,0.08); }
+        .msg { padding: 14px 18px; border-radius: 22px; font-size: 15px; max-width: 78%; line-height: 1.7; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); }
+        .ai { background: rgba(51, 65, 85, 0.95); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .user { background: linear-gradient(135deg, var(--secondary), var(--primary)); color: #020617; font-weight: 700; align-self: flex-end; border-bottom-right-radius: 4px; }
+
+        /* 輸入組件 */
+        .input-group { display: flex; gap: 12px; }
+        input[type=text] { flex: 1; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 14px 16px; border-radius: 16px; outline: none; }
+        button { min-width: 110px; background: linear-gradient(90deg, var(--primary), var(--secondary)); border: none; padding: 14px 22px; border-radius: 16px; font-weight: 700; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.35); }
+        .speech-toggle { min-width: auto; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 14px; font-size: 0.95em; }
+        .speech-toggle.active { background: rgba(30, 120, 255, 0.15); border-color: rgba(0,242,254,0.4); color: var(--accent); }
+        .speech-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .speech-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 16px; }
+        .speech-settings label { display: flex; flex-direction: column; gap: 8px; font-size: 0.95em; color: #cbd5e1; }
+        .speech-settings input,
+        .speech-settings select { width: 100%; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; color: #fff; padding: 10px 12px; }
+        .speech-settings span { color: var(--accent); font-weight: 700; }
+        .speech-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .speech-controls button { min-width: 120px; }
+        .ai-reply { display: flex; flex-direction: column; gap: 10px; }
+
+        .milestone-track { display: flex; justify-content: space-between; gap: 12px; margin: 18px 0; padding: 40px 20px; background: linear-gradient(135deg, rgba(0,242,254,0.1), rgba(79,172,254,0.1)); border-radius: 20px; border: 1px solid rgba(0,242,254,0.2); position: relative; overflow: hidden; min-height: 200px; }
+        .milestone-track::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="circuit" patternUnits="userSpaceOnUse" width="20" height="20"><path d="M0 10h10v10H0z" fill="none" stroke="rgba(0,242,254,0.1)" stroke-width="0.5"/><circle cx="5" cy="5" r="1" fill="rgba(0,242,254,0.2)"/></pattern></defs><rect width="100" height="100" fill="url(%23circuit)"/></svg>'); opacity: 0.3; animation: circuit-flow 10s linear infinite; }
+        @keyframes circuit-flow { 0% { transform: translateX(-20px); } 100% { transform: translateX(20px); } }
+        .milestone-step { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 15px; text-align: center; font-size: 0.9em; color: #cbd5e1; position: relative; z-index: 1; padding: 20px; transition: all 0.3s ease; }
+        .milestone-step:hover { transform: scale(1.05); }
+        .milestone-step img { width: 80px; height: 80px; border-radius: 20px; background: rgba(255,255,255,0.08); object-fit: cover; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: all 0.3s ease; }
+        .milestone-step.active img { box-shadow: 0 0 0 4px rgba(0,242,254,0.18), 0 10px 30px rgba(0,242,254,0.3); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .milestone-step.active span { color: var(--accent); font-weight: 700; text-shadow: 0 0 10px var(--accent); }
+        .milestone-step label { margin-top: 8px; color: #94a3b8; font-size: 0.82em; line-height: 1.4; }
+
+        @media (max-width: 768px) {
+            .speech-settings { grid-template-columns: 1fr; }
+            .speech-controls { flex-direction: column; align-items: stretch; }
+            .speech-controls button { width: 100%; }
+            .input-group { flex-direction: column; }
+            .input-group button { width: 100%; }
+            .milestone-track { flex-wrap: wrap; }
+            .milestone-step { flex: 0 1 calc(50% - 8px); }
+        }
+        @media (max-width: 768px) {
+            .speech-settings { grid-template-columns: 1fr; }
+            .speech-controls { flex-direction: column; align-items: stretch; }
+            .speech-controls button { width: 100%; }
+            .input-group { flex-direction: column; }
+            .input-group button { width: 100%; }
+        }
+
+        /* 電路圖縮放容器 */
+        .layout-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 25px; align-items: start; }
+        .col-left, .col-right { display: flex; flex-direction: column; }
+        .image-panel { display: flex; flex-direction: column; background: transparent; border: none; box-shadow: none; padding: 0; }
+        .image-panel > h3 { margin: 0 0 18px 0; border-bottom: none; padding-bottom: 0; }
+        .iframe-container { width: 100%; height: 420px; max-height: 420px; border-radius: 0; overflow: hidden; background: #fff; border: none; cursor: grab; position: relative; box-shadow: none; touch-action: auto; }
+        .iframe-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(0,242,254,0.05), rgba(79,172,254,0.05)); pointer-events: none; z-index: 1; }
+        .board-preview { position: absolute; top: 0; left: 0; display: block; max-width: none; width: auto; height: auto; min-height: 100%; background: transparent; pointer-events: none; transform-origin: top left; user-drag: none; -webkit-user-drag: none; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; filter: none; }
+
+        @media (max-width: 768px) {
+            .layout-grid { display: flex; flex-direction: column; }
+            .col-left, .col-right { width: 100%; }
+            .col-right { order: 2; margin-top: 20px; }
+            .card { width: 100%; }
+        }
+
+        /* 留言板 */
+        .footer-card { margin-top: 25px; display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
+        @media (min-width: 768px) { .footer-card { grid-template-columns: 1.5fr 1fr; } }
+        .feedback-panel { display: flex; flex-direction: column; gap: 18px; }
+        .feedback-panel h3 { margin-bottom: 0; }
+        .feedback-panel input,
+        .feedback-panel textarea,
+        .feedback-panel button { width: 100%; }
+        .feedback-panel textarea { min-height: 180px; resize: vertical; }
+        .feedback-panel button { max-width: 240px; align-self: flex-start; }
+        .feedback-info { background: rgba(255,255,255,0.06); padding: 40px; border-radius: 20px; border: 1px dashed rgba(255,255,255,0.12); min-height: 420px; position: relative; overflow: visible; display: flex; flex-direction: column; }
+        .feedback-info::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stars" patternUnits="userSpaceOnUse" width="30" height="30"><circle cx="15" cy="15" r="1" fill="rgba(254,202,87,0.3)"/><circle cx="5" cy="25" r="0.5" fill="rgba(0,242,254,0.2)"/></pattern></defs><rect width="100" height="100" fill="url(%23stars)"/></svg>'); opacity: 0.3; animation: twinkle 8s ease-in-out infinite; pointer-events: none; }
+        .feedback-list { flex: 1 1 auto; max-height: 280px; min-height: 240px; overflow-y: auto; overflow-x: hidden; margin-top: 20px; display: flex; flex-direction: column; gap: 14px; padding-right: 6px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; position: relative; z-index: 1; }
+        .feedback-list::-webkit-scrollbar { width: 8px; }
+        .feedback-list::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.6); border-radius: 999px; }
+        .feedback-list { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.6) transparent; }
+        .comment-card { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; color: #e2e8f0; }
+        .comment-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.85em; color: #94a3b8; margin-bottom: 12px; }
+        .comment-card p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
+        .comment-empty { margin-top: 18px; color: #94a3b8; font-size: 0.95em; }
+        .feedback-panel input,
+        .feedback-panel textarea { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 14px 16px; border-radius: 16px; }
+    </style>
+    
+    <script>
+        // 系統訪問控制：必須通過系統檢查才能進入聊天系統
+        function checkSystemAccess() {
+            const systemCheckPassed = localStorage.getItem('systemCheckPassed') === 'true';
+            if (!systemCheckPassed) {
+                // 重定向到系統檢查頁面
+                window.location.href = '{% url "check" %}';
+            }
+        }
+        
+        // 頁面載入時檢查
+        window.addEventListener('DOMContentLoaded', checkSystemAccess);
+    </script>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-logo">
+            <img src="/static/logo.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/609/609803.png'">
+            <h1>FUTURE CABIN</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'check' %}" class="status-check-btn">🔍 系統狀態</a>
+            <div style="font-size: 0.9em; color: var(--primary); font-weight: bold;">監控系統 V2.0</div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <p class="eyebrow">智慧小屋專案</p>
+            <h2>FUTURE CABIN 智慧導覽與監控中心</h2>
+            <p class="subtitle">整合 AI 導覽、即時電路模擬與訪客回饋，讓參觀者一眼看懂小屋功能與專案亮點。</p>
+        </div>
+        <div class="hero-carousel">
+            <div class="carousel-inner" id="inner">
+                <div class="slide">
+                    <img src="{% static '程式.webp' %}" onerror="this.src='https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=1200'">
+                    <div class="slide-content"><h2>程式設計</h2><p>從零開始，打造屬於您的智慧小屋。</p></div>
+                </div>
+                <div class="slide">
+                    <img src="{% static '接電路.webp' %}" onerror="this.src='https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200'">
+                    <div class="slide-content"><h2>連接電路</h2><p>即時電路模擬，讓您體驗未來科技的魅力。</p></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="layout-grid">
+            <div class="col-left">
+                <div class="card" style="margin-bottom: 25px;">
+                    <h3>📊 研發里程碑</h3>
+                    <div id="milestone" style="font-size: 2em; font-weight: 800; color: var(--accent); text-align: center;">100%</div>
+                    <div class="milestone-track" id="milestoneTrack">
+                        <div class="milestone-step" data-value="25">
+                            <img src="{% static '1.webp' %}" alt="研發中圖片 0%" />
+                            <span>0%</span>
+                            <label>第 1 步</label>
+                        </div>
+                        <div class="milestone-step" data-value="25">
+                            <img src="{% static '2.webp' %}" alt="研發中圖片 25%" />
+                            <span>25%</span>
+                            <label>第 2 步</label>
+                        </div>
+                        <div class="milestone-step" data-value="50">
+                            <img src="{% static '3.webp' %}" alt="研發中圖片 50%" />
+                            <span>50%</span>
+                            <label>第 3 步</label>
+                        </div>
+                        <div class="milestone-step" data-value="100">
+                            <img src="{% static '4.webp' %}" alt="研發中圖片 75%" />
+                            <span>100%</span>
+                            <label>第 4 步</label>
+                        </div>
+                        <div class="milestone-step" data-value="100">
+                            <img src="{% static '5.webp' %}" alt="研發中圖片 100%" />
+                            <span>100%</span>
+                            <label>發表</label>
+                        </div>
+                    </div>
+                    <input id="milestoneRange" type="range" min="0" max="100" step="25" value="100" style="width:100%; margin: 10px 0 20px;" oninput="updateUI(this.value)">
+                    <div id="desc" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); font-size: 0.9em;">
+                        <b>💎 發表階段：</b>Future Cabin 正式啟動，感謝參觀！
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap; justify-content: space-between;">
+                        <h3 style="margin:0;">🤖 智慧導覽 AI</h3>
+                    </div>
+                    <div class="chat-wrap" id="box">
+                        <div class="ai-reply">
+                            <div class="msg ai">{{ welcome_text }}</div>
+                            <div class="speech-controls">
+                                <button class="speech-toggle" type="button" onclick="resumeSpeech('{{ welcome_text|escapejs }}')">開始朗讀</button>
+                                <button class="speech-toggle" type="button" onclick="pauseSpeech()">暫停朗讀</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="in" placeholder="請輸入指令或詢問..." onkeypress="if(event.keyCode==13) chat()">
+                        <button onclick="chat()">傳送</button>
+                    </div>
+                    <div class="speech-settings">
+                        <label>語音選擇
+                            <select id="speechVoiceSelect"></select>
+                        </label>
+                        <label>語速 <span id="rateValue">0.95</span>
+                            <input type="range" id="speechRate" min="0.6" max="1.5" step="0.05" value="0.95">
+                        </label>
+                        <label>音調 <span id="pitchValue">1.05</span>
+                            <input type="range" id="speechPitch" min="0.5" max="2" step="0.05" value="1.05">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-right">
+                <div class="image-panel">
+                    <h3>🔌 智慧小屋設計圖</h3>
+                    <div class="iframe-container" id="previewContainer">
+                        <img id="boardPreview" class="board-preview" src="{% static 'board-preview.png' %}" alt="智慧小屋佈局預覽" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card footer-card">
+            <div class="feedback-panel">
+                <h3 style="color: var(--accent);">✍️ 訪客留言板</h3>
+                <p style="margin:0 0 10px 0; color:#cbd5e1; line-height:1.7;">請留下您的稱呼與建議，我們會把您的想法帶回專案改進。</p>
+                <input type="text" id="fname" placeholder="您的稱呼">
+                <textarea id="fmsg" placeholder="留下您的建議..."></textarea>
+                <button onclick="feedback()" style="background:var(--accent);">送出留言</button>
+            </div>
+            <div class="feedback-info">
+                <h3 style="margin-top:0; color: var(--primary);">📝 來賓訊息</h3>
+                <p style="line-height: 1.9; color: #cbd5e1; margin: 10px 0 0 0;">
+                    這裡會顯示大家對智慧小屋的想法與鼓勵。您的建議是我們繼續進步的最大動力！
+                </p>
+                <div id="commentsList" class="feedback-list">
+                    {% if guest_comments %}
+                        {% for comment in guest_comments %}
+                            <div class="comment-card">
+                                <div class="comment-meta">
+                                    <span>{{ comment.name }}</span>
+                                    <span>{{ comment.timestamp }}</span>
+                                </div>
+                                <p>{{ comment.message }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="comment-empty">目前還沒有訪客留言，成為第一位留下建議吧！</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增區塊：專案詳情 -->
+        <div class="card" style="margin-top: 30px;">
+            <h3>🔧 專案詳情</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+                <!-- 硬體清單 -->
+                <div>
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">📋 硬體清單</h4>
+                    <ul style="list-style: none; padding: 0; color: #cbd5e1; line-height: 1.8;">
+                        <li>💻 <strong>微控制器：</strong> BBC micro:bit v2</li>
+                        <li> 📡 <strong>無線模組：</strong> micro:bit</li>
+                        <li> 🛠️ <strong>感測器</strong> 人體感應模組、煙霧感應器</li>
+                        <li> 🕒 <strong>輸出設備</strong> sg90 伺服馬達</li>
+                        <li> 📦 <strong>外殼：</strong> 瓦楞紙和珍珠板</li>
+                        <li> 🔌 <strong>連接線：</strong> 杜邦線與跳線</li>
+                    </ul>
+                </div>
+
+                <!-- 工作分配圖 -->
+                <div>
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">👥 工作分配圖</h4>
+                    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #020617;">團</div>
+                                <div>
+                                    <div style="font-weight: bold; color: var(--accent);">智慧小屋共同製作團隊</div>
+                                    <div style="font-size: 0.9em; color: #cbd5e1;">周楷恩、翁晨芯、曾堉凱、何昊橙</div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <!-- 周楷恩 -->
+                                <div style="background: rgba(0,242,254,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,242,254,0.2);">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                        <div style="width: 30px; height: 30px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #020617; font-size: 0.8em;">周</div>
+                                        <div>
+                                            <div style="font-weight: bold; color: var(--accent); font-size: 0.9em;">周楷恩</div>
+                                            <div style="font-size: 0.8em; color: #cbd5e1;">程式設計師</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 翁晨芯 -->
+                                <div style="background: rgba(254,202,87,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(254,202,87,0.2);">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                        <div style="width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), #ff6b6b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #020617; font-size: 0.8em;">翁</div>
+                                        <div>
+                                            <div style="font-weight: bold; color: var(--accent); font-size: 0.9em;">翁晨芯</div>
+                                            <div style="font-size: 0.8em; color: #cbd5e1;">隊長</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 曾堉凱 -->
+                                <div style="background: rgba(79,172,254,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(79,172,254,0.2);">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                        <div style="width: 30px; height: 30px; background: linear-gradient(135deg, var(--secondary), #4ecdc4); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #020617; font-size: 0.8em;">曾</div>
+                                        <div>
+                                            <div style="font-weight: bold; color: var(--accent); font-size: 0.9em;">曾堉凱</div>
+                                            <div style="font-size: 0.8em; color: #cbd5e1;">房屋組裝手</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 何昊橙 -->
+                                <div style="background: rgba(255,107,107,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,107,107,0.2);">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                        <div style="width: 30px; height: 30px; background: linear-gradient(135deg, #ff6b6b, #feca57); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #020617; font-size: 0.8em;">何</div>
+                                        <div>
+                                            <div style="font-weight: bold; color: var(--accent); font-size: 0.9em;">何昊橙</div>
+                                            <div style="font-size: 0.8em; color: #cbd5e1;">程式設計師</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align: center; color: var(--accent); font-weight: bold; font-size: 1.1em; margin-top: 10px;">
+                                💡 小屋專案由周楷恩、翁晨芯、曾堉凱、何昊橙共同完成，網站由周楷恩製作
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 在線狀態檢查 -->
+        <div class="card" style="margin-top: 20px; text-align: center;">
+            <h3>🌐 系統狀態檢查</h3>
+            <p style="color: #cbd5e1; margin-bottom: 15px;">檢查 ngrok 隧道是否正常運行</p>
+            <button onclick="checkOnlineStatus()" style="background: var(--primary); color: #020617; border: none; padding: 12px 24px; border-radius: 12px; font-weight: bold; cursor: pointer;">檢查在線狀態</button>
+            <div id="statusResult" style="margin-top: 15px; font-weight: bold;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 輪播動畫
+        let s = 0; setInterval(() => { s = (s + 1) % 2; document.getElementById('inner').style.transform = `translateX(-${s * 100}%)`; }, 5000);
+
+        function updateUI(v) {
+            document.getElementById('milestone').innerText = v + "%";
+            const d = { "0": "🌑 創意發想階段", "25": "🌘 原型設計階段", "50": "🌗 組裝階段", "75": "🌖 程式開發階段", "100": "💎 發表成功階段" };
+            document.getElementById('desc').innerHTML = `<b>${d[v]}</b>`;
+            updateMilestoneSteps(v);
+        }
+
+        function updateMilestoneSteps(value) {
+            const milestoneSteps = document.querySelectorAll('.milestone-step');
+            milestoneSteps.forEach(step => {
+                const stepValue = parseInt(step.dataset.value, 10);
+                step.classList.toggle('active', stepValue <= parseInt(value, 10));
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const milestoneInput = document.getElementById('milestoneRange');
+            if (milestoneInput) {
+                updateUI(milestoneInput.value);
+            }
+        });
+
+        let speechEnabled = true;
+        let speechVoice = null;
+        let speechRate = 0.95;
+        let speechPitch = 1.05;
+        let lastSpeechText = '';
+        let chatController = null;
+
+        function populateVoiceSelect() {
+            const select = document.getElementById('speechVoiceSelect');
+            if (!select) return;
+            const voices = window.speechSynthesis.getVoices();
+            select.innerHTML = '';
+            voices.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.name;
+                option.textContent = `${v.name} (${v.lang})`;
+                select.appendChild(option);
+            });
+            if (speechVoice) {
+                const match = Array.from(select.options).find(opt => opt.value === speechVoice.name);
+                if (match) match.selected = true;
+            }
+            select.addEventListener('change', () => {
+                const found = voices.find(v => v.name === select.value);
+                if (found) speechVoice = found;
+            });
+        }
+
+        function loadSpeechVoice() {
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices.length) return;
+            const preferred = [
+                /microsoft.*yating|yating/i,
+                /gemini/i,
+                /male/i,
+                /zh[-_]?tw|taiwan|yue/i,
+                /google zh/i,
+            ];
+            speechVoice = preferred
+                .map(pattern => voices.find(v => pattern.test(v.name) || pattern.test(v.lang)))
+                .find(Boolean) || voices.find(v => /male/i.test(v.name)) || voices[0];
+            populateVoiceSelect();
+            const rateInput = document.getElementById('speechRate');
+            const pitchInput = document.getElementById('speechPitch');
+            const rateLabel = document.getElementById('rateValue');
+            const pitchLabel = document.getElementById('pitchValue');
+            if (rateInput && rateLabel) {
+                rateInput.addEventListener('input', () => {
+                    speechRate = parseFloat(rateInput.value);
+                    rateLabel.textContent = speechRate.toFixed(2);
+                });
+            }
+            if (pitchInput && pitchLabel) {
+                pitchInput.addEventListener('input', () => {
+                    speechPitch = parseFloat(pitchInput.value);
+                    pitchLabel.textContent = speechPitch.toFixed(2);
+                });
+            }
+        }
+        loadSpeechVoice();
+        window.speechSynthesis.addEventListener('voiceschanged', loadSpeechVoice);
+
+        function pauseSpeech() {
+            if (window.speechSynthesis && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+                window.speechSynthesis.pause();
+            }
+        }
+
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
+                }
+            }
+            return '';
+        }
+
+        function resumeSpeech(text) {
+            if (!window.speechSynthesis) return;
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+                return;
+            }
+            if (text) {
+                speakText(text);
+                return;
+            }
+            if (lastSpeechText) {
+                speakText(lastSpeechText);
+            }
+        }
+
+        function speakText(text) {
+            if (!speechEnabled || !window.speechSynthesis) return;
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            lastSpeechText = text;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW';
+            utterance.rate = speechRate;
+            utterance.pitch = speechPitch;
+            utterance.volume = 1;
+            if (speechVoice) {
+                utterance.voice = speechVoice;
+            }
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function createAIReply(text) {
+            const container = document.createElement('div');
+            container.className = 'ai-reply';
+            const msg = document.createElement('div');
+            msg.className = 'msg ai';
+            const controls = document.createElement('div');
+            controls.className = 'speech-controls';
+            const startBtn = document.createElement('button');
+            startBtn.type = 'button';
+            startBtn.className = 'speech-toggle';
+            startBtn.textContent = '開始朗讀';
+            startBtn.onclick = () => resumeSpeech(text);
+            const pauseBtn = document.createElement('button');
+            pauseBtn.type = 'button';
+            pauseBtn.className = 'speech-toggle';
+            pauseBtn.textContent = '暫停朗讀';
+            pauseBtn.onclick = pauseSpeech;
+            controls.appendChild(startBtn);
+            controls.appendChild(pauseBtn);
+            container.appendChild(msg);
+            container.appendChild(controls);
+            return { container, msg };
+        }
+
+        function animateText(element, text, callback) {
+            let i = 0;
+            element.textContent = '';
+            const interval = setInterval(() => {
+                element.textContent += text[i] === '\n' ? '\n' : text[i];
+                i += 1;
+                element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (i >= text.length) {
+                    clearInterval(interval);
+                    if (typeof callback === 'function') callback();
+                }
+            }, 18);
+        }
+
+        async function chat() {
+            const i = document.getElementById('in');
+            const b = document.getElementById('box');
+            if (!i.value.trim()) return;
+            const t = i.value; i.value = '';
+            b.innerHTML += `<div class="msg user">${t}</div>`;
+            b.scrollTop = b.scrollHeight;
+
+            if (chatController) {
+                chatController.abort();
+            }
+            chatController = new AbortController();
+            const signal = chatController.signal;
+
+            try {
+                const res = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: 'message=' + encodeURIComponent(t),
+                    signal,
+                });
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+                const { container, msg: aiNode } = createAIReply(data.reply);
+                b.appendChild(container);
+                animateText(aiNode, data.reply, () => speakText(data.reply));
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    return;
+                }
+                const errorNode = document.createElement('div');
+                errorNode.className = 'msg ai';
+                errorNode.textContent = '❌ 連線異常';
+                b.appendChild(errorNode);
+            }
+            b.scrollTop = b.scrollHeight;
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (chatController) {
+                chatController.abort();
+            }
+        });
+
+        const previewContainer = document.getElementById('previewContainer');
+        const boardPreview = document.getElementById('boardPreview');
+        let zoomLevel = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let translateStartX = 0;
+        let translateStartY = 0;
+        let originalWidth = boardPreview.offsetWidth;
+        let originalHeight = boardPreview.offsetHeight;
+
+        function updatePreviewScale() {
+            boardPreview.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomLevel})`;
+        }
+
+        previewContainer.addEventListener('wheel', (event) => {
+            // 檢查滑鼠是否在圖片的視覺區域內，如果是則放大縮小，否則允許頁面捲動。
+            const containerRect = previewContainer.getBoundingClientRect();
+            const currentLeft = containerRect.left + translateX;
+            const currentTop = containerRect.top + translateY;
+            const currentWidth = originalWidth * zoomLevel;
+            const currentHeight = originalHeight * zoomLevel;
+            const isOverImage = event.clientX >= currentLeft && event.clientX <= currentLeft + currentWidth &&
+                               event.clientY >= currentTop && event.clientY <= currentTop + currentHeight;
+            if (isOverImage && Math.abs(event.deltaY) > 0) {
+                event.preventDefault();
+                const delta = -event.deltaY * 0.0015;
+                zoomLevel = Math.min(3, Math.max(0.5, zoomLevel + delta));
+                updatePreviewScale();
+            }
+        }, { passive: false });
+
+        previewContainer.addEventListener('mousedown', (event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            isPanning = true;
+            previewContainer.style.cursor = 'grabbing';
+            panStartX = event.clientX;
+            panStartY = event.clientY;
+            translateStartX = translateX;
+            translateStartY = translateY;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isPanning) return;
+            isPanning = false;
+            previewContainer.style.cursor = 'grab';
+        });
+
+        document.addEventListener('mousemove', (event) => {
+            if (!isPanning) return;
+            event.preventDefault();
+            const deltaX = (event.clientX - panStartX) / zoomLevel;
+            const deltaY = (event.clientY - panStartY) / zoomLevel;
+            translateX = translateStartX + deltaX;
+            translateY = translateStartY + deltaY;
+            updatePreviewScale();
+        });
+
+        boardPreview.ondragstart = () => false;
+        updatePreviewScale();
+
+        function appendComment(comment) {
+            const container = document.getElementById('commentsList');
+            if (!container) return;
+
+            const emptyNode = container.querySelector('.comment-empty');
+            if (emptyNode) {
+                emptyNode.remove();
+            }
+
+            const card = document.createElement('div');
+            card.className = 'comment-card';
+            card.innerHTML = `
+                <div class="comment-meta">
+                    <span>${comment.name}</span>
+                    <span>${comment.timestamp}</span>
+                </div>
+                <p>${comment.message}</p>
+            `;
+            container.prepend(card);
+        }
+
+        async function feedback() {
+            const n = document.getElementById('fname').value.trim();
+            const m = document.getElementById('fmsg').value.trim();
+            if (!m) return alert('請填寫留言');
+            try {
+                const res = await fetch('/feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: `name=${encodeURIComponent(n)}&message=${encodeURIComponent(m)}`
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    const now = new Date();
+                    const timestamp = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                    appendComment({
+                        name: n || '熱心訪客',
+                        timestamp,
+                        message: m.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    });
+                    alert('感謝回饋！');
+                    document.getElementById('fname').value = '';
+                    document.getElementById('fmsg').value = '';
+                } else {
+                    alert('發送失敗');
+                }
+            } catch {
+                alert('發送失敗');
+            }
+        }
+
+        async function checkOnlineStatus() {
+            const statusDiv = document.getElementById('statusResult');
+            statusDiv.innerHTML = '<span style="color: var(--accent);">檢查中...</span>';
+
+            try {
+                // 先嘗試訪問當前服務器的靜態資源
+                const pingResponse = await fetch(window.location.origin + '/static/logo.png', { method: 'HEAD' });
+                if (pingResponse.ok) {
+                    statusDiv.innerHTML = '<span style="color: #00ff00;">✅ 系統在線 - 服務器響應正常</span>';
+                    return;
+                }
+            } catch (error) {
+                // 這裡不做任何事，繼續後續檢查
+            }
+
+            try {
+                const selfCheck = await fetch(window.location.href, { method: 'HEAD' });
+                if (selfCheck.ok) {
+                    statusDiv.innerHTML = '<span style="color: #00ff00;">✅ 系統在線 - 本地服務正常</span>';
+                } else {
+                    statusDiv.innerHTML = '<span style="color: #ff6b6b;">❌ 系統離線 - 網路異常</span>';
+                }
+            } catch (fallbackError) {
+                statusDiv.innerHTML = '<span style="color: #ff6b6b;">❌ 檢查失敗 - 網路錯誤</span>';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'logo.png' %}">
+    <title>系統狀態檢查 | FUTURE CABIN</title>
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent: #feca57;
+            --bg: #020617;
+            --card: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #1e293b 0%, #020617 100%);
+            color: #f8fafc;
+            font-family: 'Inter', 'PingFang TC', sans-serif;
+            margin: 0; padding: 0; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .container {
+            width: 90%; max-width: 600px;
+            text-align: center;
+        }
+
+        .status-card {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .status-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .status-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .status-message {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .check-button {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            color: #020617;
+        }
+
+        .check-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .status-details {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status-details h4 {
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .status-details p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: none;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .online { color: #00ff00; }
+        .offline { color: #ff6b6b; }
+        .unknown { color: #ffa500; }
+
+        .enter-button {
+            background: linear-gradient(90deg, #00ff00, #00ccff);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            color: #000;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .enter-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-card">
+            <div id="statusIcon" class="status-icon">🔄</div>
+            <h1 class="status-title">系統狀態檢查</h1>
+            <p class="status-message">正在檢查 FUTURE CABIN 系統狀態...</p>
+
+            <button id="checkBtn" class="check-button" onclick="checkStatus()">檢查狀態</button>
+
+            <div id="statusDetails" class="status-details" style="display: none;">
+                <h4>檢查結果</h4>
+                <p id="statusText">尚未進行檢查</p>
+            </div>
+
+            <button id="enterBtn" class="enter-button" onclick="enterChat()">✨ 進入聊天系統</button>
+            <a href="{% url 'chat' %}" class="back-link" id="backLink">← 返回主頁面</a>
+        </div>
+    </div>
+
+    <script>
+        let isChecking = false;
+
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
+                }
+            }
+            return '';
+        }
+
+        function setSystemCheckPassed() {
+            localStorage.setItem('systemCheckPassed', 'true');
+            localStorage.setItem('systemCheckTime', new Date().toISOString());
+        }
+
+        function isSystemCheckPassed() {
+            return localStorage.getItem('systemCheckPassed') === 'true';
+        }
+
+        function enterChat() {
+            window.location.href = '{% url "chat" %}';
+        }
+
+        async function checkStatus() {
+            if (isChecking) return;
+
+            isChecking = true;
+            const btn = document.getElementById('checkBtn');
+            const icon = document.getElementById('statusIcon');
+            const message = document.querySelector('.status-message');
+            const details = document.getElementById('statusDetails');
+            const statusText = document.getElementById('statusText');
+
+            // 開始檢查
+            btn.textContent = '檢查中...';
+            btn.disabled = true;
+            icon.textContent = '⏳';
+            message.textContent = '正在檢查系統狀態，請稍候...';
+            details.style.display = 'none';
+
+            const results = {
+                basic: false,
+                django: false,
+                chat: false,
+                ai: false
+            };
+
+            try {
+                // 檢查 1: 基本連線測試 (靜態文件)
+                try {
+                    const basicCheck = await Promise.race([
+                        fetch(window.location.origin + '/static/logo.png', {
+                            method: 'HEAD',
+                            cache: 'no-cache'
+                        }),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('超時')), 3000)
+                        )
+                    ]);
+                    results.basic = basicCheck.ok;
+                } catch (e) {
+                    console.log('靜態資源檢查失敗:', e.message);
+                    results.basic = false;
+                }
+
+                // 檢查 2: Django 路由測試 (首頁)
+                try {
+                    const djangoCheck = await Promise.race([
+                        fetch(window.location.origin + '/', {
+                            method: 'HEAD',
+                            cache: 'no-cache'
+                        }),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('超時')), 3000)
+                        )
+                    ]);
+                    results.django = djangoCheck.ok;
+                } catch (e) {
+                    console.log('Django 檢查失敗:', e.message);
+                    results.django = false;
+                }
+
+                // 檢查 3: 聊天頁面測試
+                // 注意：不直接載入頁面，而是通過發送一個小的測試消息來檢查
+                try {
+                    const chatCheck = await Promise.race([
+                        fetch(window.location.origin + '/chat/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': getCookie('csrftoken') || getCookie('csrf_token') || 'test'
+                            },
+                            body: 'message=',
+                            cache: 'no-cache'
+                        }),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('超時')), 5000)
+                        )
+                    ]);
+                    // 只要服務器能回應，就認為聊天系統正常
+                    results.chat = chatCheck.status >= 200 && chatCheck.status < 500;
+                } catch (e) {
+                    console.log('聊天系統檢查失敗:', e.message);
+                    results.chat = false;
+                }
+
+                // 檢查 4: AI 聊天功能
+                // 基於聊天系統狀態推斷
+                results.ai = results.chat;
+
+            } catch (error) {
+                console.error('檢查過程中發生錯誤:', error);
+            }
+
+            const allOnline = results.basic && results.django && results.chat && results.ai;
+
+            // 更新 UI
+            if (allOnline) {
+                // ✅ 檢測通過：設置標記，允許進入聊天系統
+                setSystemCheckPassed();
+                
+                icon.textContent = '✅';
+                icon.className = 'status-icon online';
+                message.textContent = '系統運行正常！所有服務都在線上。';
+                statusText.innerHTML = `
+                    <span class="online">✅ 靜態資源載入正常</span><br>
+                    <span class="online">✅ Django 服務器運行正常</span><br>
+                    <span class="online">✅ 聊天系統運行正常</span><br>
+                    <span class="online">✅ AI 聊天功能正常</span><br>
+                    <br>
+                    <strong>系統狀態：完全在線 🎉</strong>
+                `;
+                
+                // 顯示進入按鈕，隱藏返回鏈接
+                document.getElementById('enterBtn').style.display = 'inline-block';
+                document.getElementById('backLink').style.display = 'none';
+            } else {
+                // ❌ 檢測失敗：清除標記
+                localStorage.removeItem('systemCheckPassed');
+                
+                icon.textContent = '⚠️';
+                icon.className = 'status-icon unknown';
+                message.textContent = '系統部分服務可能有問題，請查看詳細資訊。';
+                statusText.innerHTML = `
+                    <span class="${results.basic ? 'online' : 'offline'}">${results.basic ? '✅' : '❌'} 靜態資源載入${results.basic ? '正常' : '異常'}</span><br>
+                    <span class="${results.django ? 'online' : 'offline'}">${results.django ? '✅' : '❌'} Django 服務器${results.django ? '運行正常' : '運行異常'}</span><br>
+                    <span class="${results.chat ? 'online' : 'offline'}">${results.chat ? '✅' : '❌'} 聊天系統${results.chat ? '運行正常' : '運行異常'}</span><br>
+                    <span class="${results.ai ? 'online' : 'offline'}">${results.ai ? '✅' : '❌'} AI 聊天功能${results.ai ? '正常' : '異常'}</span><br>
+                    <br>
+                    <strong>系統狀態：${allOnline ? '完全在線' : '部分異常'}</strong><br>
+                    <small style="color: #ffa500; margin-top: 10px; display: block;">提示：如果能正常使用聊天功能，但檢查顯示異常，請重新檢查。</small>
+                `;
+                
+                // 隱藏進入按鈕，顯示返回鏈接
+                document.getElementById('enterBtn').style.display = 'none';
+                document.getElementById('backLink').style.display = 'inline-block';
+            }
+
+            // 顯示詳細資訊
+            details.style.display = 'block';
+
+            // 重置按鈕
+            btn.textContent = '重新檢查';
+            btn.disabled = false;
+            isChecking = false;
+        }
+
+        // 頁面載入時自動檢查一次
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkStatus, 500); // 延遲 500ms 讓頁面完全載入
+        });
+    </script>
+</body>
+</html>

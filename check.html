@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統狀態檢查 - 日新國小智慧小屋</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .check-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+        }
+
+        .status-text {
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .check-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .check-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .check-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-icon {
+            color: #28a745;
+            font-size: 2em;
+            margin-right: 10px;
+        }
+
+        .error-icon {
+            color: #dc3545;
+            font-size: 2em;
+            margin-right: 10px;
+        }
+
+        .details {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .detail-item {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detail-label {
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #666;
+        }
+
+        .enter-button {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .enter-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .team-info {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="check-container">
+        <div class="logo">🔍 系統檢查</div>
+        <div class="subtitle">檢查智慧小屋系統狀態</div>
+
+        <div class="status-indicator" id="statusIndicator">
+            <div class="loading"></div>
+            <span class="status-text">正在檢查系統狀態...</span>
+        </div>
+
+        <button class="check-button" id="checkButton" onclick="performCheck()">
+            重新檢查
+        </button>
+
+        <button class="enter-button" id="enterButton" onclick="enterChat()">
+            進入智慧小屋 🚪
+        </button>
+
+        <div class="details" id="details" style="display: none;">
+            <div class="detail-item">
+                <span class="detail-label">Django 伺服器:</span>
+                <span class="detail-value" id="djangoStatus">檢查中...</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">AI 服務:</span>
+                <span class="detail-value" id="aiStatus">檢查中...</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">留言系統:</span>
+                <span class="detail-value" id="commentStatus">檢查中...</span>
+            </div>
+        </div>
+
+        <div class="team-info">
+            日新國小 智慧小屋團隊製作
+        </div>
+    </div>
+
+    <script>
+        let checkResults = {
+            django: false,
+            ai: false,
+            comments: false
+        };
+
+        async function checkDjango() {
+            try {
+                // 測試 AI 狀態檢查端點來驗證 Django 伺服器
+                const response = await fetch('/api/check-ai/', {
+                    method: 'GET'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    checkResults.django = data.status === 'ok';
+                    document.getElementById('djangoStatus').textContent = checkResults.django ? '正常' : '異常';
+                    return true;
+                } else {
+                    checkResults.django = false;
+                    document.getElementById('djangoStatus').textContent = '異常';
+                    return false;
+                }
+            } catch (error) {
+                checkResults.django = false;
+                document.getElementById('djangoStatus').textContent = '連接失敗';
+                return false;
+            }
+        }
+
+        async function checkAI() {
+            try {
+                const response = await fetch('/api/check-ai/', {
+                    method: 'GET'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    checkResults.ai = data.status === 'ok';
+                    document.getElementById('aiStatus').textContent = checkResults.ai ? '正常' : '異常';
+                    return checkResults.ai;
+                } else {
+                    checkResults.ai = false;
+                    document.getElementById('aiStatus').textContent = '無法連接';
+                    return false;
+                }
+            } catch (error) {
+                checkResults.ai = false;
+                document.getElementById('aiStatus').textContent = '連接失敗';
+                return false;
+            }
+        }
+
+        async function checkComments() {
+            try {
+                // 獲取 CSRF token
+                const csrfToken = getCookie('csrftoken') || getCookie('csrf_token');
+                
+                const response = await fetch('/feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: 'name=system_check&message=系統狀態檢查測試留言'
+                });
+                // 測試留言應該成功儲存
+                checkResults.comments = response.status === 200;
+                document.getElementById('commentStatus').textContent = checkResults.comments ? '正常' : '異常';
+                return checkResults.comments;
+            } catch (error) {
+                checkResults.comments = false;
+                document.getElementById('commentStatus').textContent = '連接失敗';
+                return false;
+            }
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        async function performCheck() {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const checkButton = document.getElementById('checkButton');
+            const enterButton = document.getElementById('enterButton');
+            const details = document.getElementById('details');
+
+            // 重置狀態
+            checkResults = { django: false, ai: false, comments: false };
+            indicator.innerHTML = '<div class="loading"></div><span class="status-text">正在檢查系統狀態...</span>';
+            checkButton.disabled = true;
+            checkButton.textContent = '檢查中...';
+            enterButton.style.display = 'none';
+            details.style.display = 'none';
+
+            try {
+                // 檢查 Django 伺服器
+                document.getElementById('djangoStatus').textContent = '檢查中...';
+                const djangoOk = await checkDjango();
+
+                // 檢查 AI 服務
+                const aiOk = await checkAI();
+
+                // 檢查留言系統
+                const commentsOk = await checkComments();
+
+                // 顯示詳細信息
+                details.style.display = 'block';
+
+                // 判斷整體狀態
+                const allOk = checkResults.django && checkResults.ai && checkResults.comments;
+
+                if (allOk) {
+                    indicator.innerHTML = '<span class="success-icon">✅</span><span class="status-text">所有系統正常運行！</span>';
+                    enterButton.style.display = 'inline-block';
+                    // 自動儲存檢查通過的標記
+                    localStorage.setItem('systemCheckPassed', 'true');
+                    localStorage.setItem('checkTime', Date.now().toString());
+                } else {
+                    indicator.innerHTML = '<span class="error-icon">❌</span><span class="status-text">部分系統異常，請聯繫管理員</span>';
+                }
+
+            } catch (error) {
+                indicator.innerHTML = '<span class="error-icon">❌</span><span class="status-text">檢查失敗：' + error.message + '</span>';
+                details.style.display = 'block';
+            }
+
+            checkButton.disabled = false;
+            checkButton.textContent = '重新檢查';
+        }
+
+        function enterChat() {
+            // 跳轉到聊天頁面
+            window.location.href = '/chat/';
+        }
+
+        // 頁面載入時自動檢查
+        window.addEventListener('load', function() {
+            // 檢查是否已經通過檢查且在24小時內
+            const checkPassed = localStorage.getItem('systemCheckPassed');
+            const checkTime = localStorage.getItem('checkTime');
+
+            if (checkPassed === 'true' && checkTime) {
+                const timeDiff = Date.now() - parseInt(checkTime);
+                const hours24 = 24 * 60 * 60 * 1000; // 24小時的毫秒數
+
+                if (timeDiff < hours24) {
+                    // 24小時內已通過檢查，直接進入
+                    enterChat();
+                    return;
+                }
+            }
+
+            // 否則進行檢查
+            performCheck();
+        });
+    </script>
+</body>
+</html>
