@@ -69,12 +69,7 @@ TEMPLATES = [
     },
 ]
 WSGI_APPLICATION = 'smart_cabin_project.my_cabin.wsgi.application'
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",  # 確保專案根目錄下的 static 資料夾會被讀取
-]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+ 
 
 
 # Database
