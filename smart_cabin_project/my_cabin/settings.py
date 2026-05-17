@@ -39,9 +39,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-# Application definition
-
 INSTALLED_APPS = [
+    'django.contrib.staticfiles',
     'django.contrib.admin',
     'chatbot',
     'django.contrib.auth',
@@ -136,9 +135,11 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        # 【修改這行！】換成 StaticFilesStorage，解除加密鎖，讓原始照片能直接讀取
+        "BACKEND": "whitenoise.storage.StaticFilesStorage",
     },
 }
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
