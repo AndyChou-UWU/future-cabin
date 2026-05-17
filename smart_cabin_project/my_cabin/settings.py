@@ -148,7 +148,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CSRF_COOKIE_SECURE = True
 
-LOGGING_CONFIG = None
+LOGGING_CONFIG = 'logging.config.dictConfig'
 
 LOGGING = {
     'version': 1,
