@@ -1,1 +1,1 @@
-web: sh -c "cd smart_cabin_project && gunicorn my_cabin.wsgi --log-file -"
+web: gunicorn --pythonpath smart_cabin_project my_cabin.wsgi --log-file -
