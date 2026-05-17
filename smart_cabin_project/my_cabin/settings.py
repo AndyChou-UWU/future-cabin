@@ -172,3 +172,4 @@ LOGGING = {
     },
 }
 CSRF_COOKIE_SAMESITE = 'None'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
