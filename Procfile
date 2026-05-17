@@ -1,1 +1,1 @@
-web: gunicorn my_cabin.wsgi --log-file -
+web: gunicorn smart_cabin_project.smart_cabin_project.wsgi --log-file -
