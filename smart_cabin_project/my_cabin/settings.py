@@ -40,7 +40,6 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 INSTALLED_APPS = [
-    'django.contrib.staticfiles',
     'django.contrib.admin',
     'chatbot',
     'django.contrib.auth',
