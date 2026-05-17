@@ -20,16 +20,16 @@ WELCOME_MESSAGES = [
     "您好！我是 FUTURE CABIN 導覽員，想了解小屋的哪個神奇功能呢？😊",
     "嗨！我是智慧導覽助手。日新國小團隊準備了很多驚喜，快問問我吧！✨"
 ]
-AI_PROVIDER = os.getenv('AI_PROVIDER', 'ollama').lower()
-AI_API_URL = os.getenv('AI_API_URL', 'http://127.0.0.1:11434/api/generate')
-AI_MODEL_RAW = os.getenv('AI_MODEL', 'qwen3.5-mini')
+AI_PROVIDER = os.environ.get('AI_PROVIDER', 'ollama').lower()
+AI_API_URL = os.environ.get('AI_API_URL', 'http://127.0.0.1:11434/api/generate')
+AI_MODEL_RAW = os.environ.get('AI_MODEL', 'qwen3.5-mini')
 MODEL_ALIASES = {
     'gama2b': 'gemma2:2b',
     'gemma2b': 'gemma2:2b',
     'gpt-4': 'gpt-4',
 }
 AI_MODEL = MODEL_ALIASES.get(AI_MODEL_RAW.lower(), AI_MODEL_RAW)
-AI_API_KEY = os.getenv('AI_API_KEY', '')  # local Ollama usually does not require an API key
+AI_API_KEY = os.environ.get('AI_API_KEY', '')  # local Ollama usually does not require an API key
 OLLAMA_LIKE_PROVIDERS = {'ollama', 'gama2b', 'local'}
 def get_ai_reply(prompt: str, retry_count: int = 2) -> str:
     """向可配置的 AI 服務送出請求並解析回覆內容，支援重試。"""
@@ -193,14 +193,8 @@ def chat_view(request):
                 return JsonResponse({'reply': ai_reply})
             else:
                 return JsonResponse({'reply': '導覽員：無法獲得回應，請稍後再試。'})
-        except requests.exceptions.ConnectionError:
-            return JsonResponse({'reply': f'導覽員：無法連接AI服務，請確認 {AI_PROVIDER} 或指定的 AI API 已啟動。'} )
-        except requests.exceptions.Timeout:
-            return JsonResponse({'reply': '導覽員：服務暫時無法回應，已重試仍然超時。請稍後再試或檢查網路連接。'})
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({'reply': f'導覽員：AI服務錯誤：{str(e)}'})
-        except Exception as e:
-            return JsonResponse({'reply': f'導覽員：發生錯誤：{str(e)}'})
+        except Exception:
+            return JsonResponse({'reply': '導覽員：服務暫時不可用，請稍後再試。'})
 
     context = {
         'team_name': '日新國小 智慧小屋團隊',
