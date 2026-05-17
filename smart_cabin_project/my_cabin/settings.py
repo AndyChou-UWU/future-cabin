@@ -146,7 +146,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False  # Railway 環境中設為 False
+SESSION_COOKIE_SECURE = False
+
+# WhiteNoise 配置 - 用於服務靜態文件
+WHITENOISE_COMPRESSION_QUALITY = 60
+WHITENOISE_KEEP_ALIVE = 5
 
 LOGGING_CONFIG = 'logging.config.dictConfig'
 
