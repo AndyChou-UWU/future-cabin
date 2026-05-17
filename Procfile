@@ -1,1 +1,1 @@
-web: gunicorn wsgi_entry:application --log-file -
+web: gunicorn --chdir smart_cabin_project/smart_cabin_project wsgi --log-file -
