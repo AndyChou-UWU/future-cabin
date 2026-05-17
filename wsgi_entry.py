@@ -12,4 +12,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'smart_cabin_project'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'my_cabin.settings')
 
 from django.core.wsgi import get_wsgi_application
+from whitenoise import WhiteNoise
+
 application = get_wsgi_application()
+application = WhiteNoise(application, root=os.path.join(BASE_DIR, 'staticfiles'))
