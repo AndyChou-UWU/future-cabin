@@ -24,15 +24,15 @@ AI_PROVIDER = os.environ.get('AI_PROVIDER', 'ollama').lower()
 AI_API_URL = os.environ.get('AI_API_URL', 'http://127.0.0.1:11434/api/generate')
 AI_MODEL_RAW = os.environ.get('AI_MODEL', 'qwen3.5-mini')
 MODEL_ALIASES = {
-    'gama2b': 'gemma2:2b',
     'gemma2b': 'gemma2:2b',
     'gpt-4': 'gpt-4',
 }
 AI_MODEL = MODEL_ALIASES.get(AI_MODEL_RAW.lower(), AI_MODEL_RAW)
 AI_API_KEY = os.environ.get('AI_API_KEY', '')  # local Ollama usually does not require an API key
-OLLAMA_LIKE_PROVIDERS = {'ollama', 'gama2b', 'local'}
+OLLAMA_LIKE_PROVIDERS = {'ollama', 'gemma2:2b', 'local'}
 def get_ai_reply(prompt: str, retry_count: int = 2) -> str:
-    """向可配置的 AI 服務送出請求並解析回覆內容，支援重試。"""
+    if '127.0.0.1' in AI_API_URL or 'localhost' in AI_API_URL:
+        return "導覽員：AI 服務目前無法連線，請稍後再試喔～ 😊"
     headers = {'Content-Type': 'application/json'}
     if AI_API_KEY:
         headers['Authorization'] = f'Bearer {AI_API_KEY}'
