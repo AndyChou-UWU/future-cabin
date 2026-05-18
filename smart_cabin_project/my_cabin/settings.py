@@ -132,16 +132,15 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'smart_cabin_project', 'static'),
 ]
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # 【修改這行！】換成 StaticFilesStorage，解除加密鎖，讓原始照片能直接讀取
-        "BACKEND": "whitenoise.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -173,3 +172,8 @@ LOGGING = {
 }
 CSRF_COOKIE_SAMESITE = 'None'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+
+
+
