@@ -126,11 +126,12 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
-
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'smart_cabin_project', 'static'),
+    os.path.join(BASE_DIR, 'static'),           # ← 改成這行
 ]
 
 STORAGES = {
@@ -138,7 +139,7 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",  # ← 改回這行
     },
 }
 # Default primary key field type
@@ -172,6 +173,16 @@ LOGGING = {
 }
 CSRF_COOKIE_SAMESITE = 'None'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+
+
+
+
+
+
+
+
 
 
 
