@@ -1,3 +1,2 @@
-release: python manage.py collectstatic --noinput --clear
-
-web: gunicorn my_cabin.wsgi:application --workers 2
+release: python manage.py migrate --noinput
+web: gunicorn smart_cabin_project.my_cabin.wsgi
