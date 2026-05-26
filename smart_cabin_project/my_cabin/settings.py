@@ -139,7 +139,7 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",   # ← 改這行
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
 # Default primary key field type
@@ -149,8 +149,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-CSRF_COOKIE_SECURE = False  # Railway 環境中設為 False
-SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = True   # Required when CSRF_COOKIE_SAMESITE='None' (Railway uses HTTPS)
+SESSION_COOKIE_SECURE = True
 
 # WhiteNoise 配置 - 用於服務靜態文件
 WHITENOISE_COMPRESSION_QUALITY = 60
@@ -172,7 +172,6 @@ LOGGING = {
     },
 }
 CSRF_COOKIE_SAMESITE = 'None'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 
