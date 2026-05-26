@@ -11,9 +11,10 @@ import time
 from django.conf import settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# Use Django's settings.BASE_DIR for path resolution
-COMMENTS_FILE = os.path.join(settings.BASE_DIR, 'comments.txt')
-BLACKLIST_FILE = os.path.join(settings.BASE_DIR, 'blacklist.txt')
+# Use persistent volume for data files
+DATA_DIR = '/app/data'
+COMMENTS_FILE = os.path.join(DATA_DIR, 'comments.txt')
+BLACKLIST_FILE = os.path.join(DATA_DIR, 'blacklist.txt')
 
 # 隨機歡迎詞：網頁剛打開時給訪客的好印象
 WELCOME_MESSAGES = [
